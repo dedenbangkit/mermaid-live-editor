@@ -2,7 +2,7 @@
 
 A modern, feature-rich live editor for Mermaid diagrams with Docker support. Create, edit, and preview Mermaid diagrams with syntax highlighting, zoom controls, and file management.
 
-![Mermaid Live Editor Screenshot](https://via.placeholder.com/800x400/007cba/white?text=Mermaid+Live+Editor)
+![Mermaid Live Editor Screenshot](images/mermaid-live-editor.jpg)
 
 ## Features
 
