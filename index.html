@@ -1,0 +1,721 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mermaid Live Editor</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10.6.1/dist/mermaid.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/yaml/yaml.min.js"></script>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 0;
+        background-color: #f5f5f5;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .header {
+        background: white;
+        padding: 12px 20px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        z-index: 100;
+      }
+
+      .header-left {
+        display: flex;
+        align-items: center;
+      }
+
+      .header-right {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+      }
+
+      .header input {
+        padding: 8px 12px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        width: 200px;
+      }
+
+      .header-toggle {
+        background: none;
+        border: none;
+        font-size: 18px;
+        cursor: pointer;
+        padding: 8px;
+        color: #666;
+        border-radius: 4px;
+      }
+
+      .header-toggle:hover {
+        background: #f5f5f5;
+        color: #007cba;
+      }
+
+      .main-layout {
+        display: flex;
+        flex: 1;
+        overflow: hidden;
+        position: relative;
+      }
+
+      .sidebar {
+        width: 280px;
+        background: white;
+        border-right: 1px solid #e8e8e8;
+        display: flex;
+        flex-direction: column;
+        transition: transform 0.3s ease;
+        position: absolute;
+        top: 0;
+        left: 0;
+        height: 100%;
+        z-index: 50;
+        box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
+      }
+
+      .sidebar.collapsed {
+        transform: translateX(-100%);
+      }
+
+      .sidebar-header {
+        padding: 16px 20px;
+        border-bottom: 1px solid #e8e8e8;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .sidebar-toggle {
+        background: none;
+        border: none;
+        font-size: 18px;
+        cursor: pointer;
+        padding: 4px;
+        color: #666;
+      }
+
+      .sidebar-toggle:hover {
+        color: #007cba;
+      }
+
+      .sidebar-title {
+        font-weight: 600;
+        color: #333;
+        transition: opacity 0.3s ease;
+      }
+
+      .sidebar.collapsed .sidebar-title {
+        opacity: 0;
+      }
+
+      .file-list {
+        flex: 1;
+        overflow-y: auto;
+        padding: 20px;
+      }
+
+      .sidebar.collapsed .file-list {
+        padding: 0 10px 10px;
+      }
+
+      .editor-container {
+        flex: 1;
+        display: flex;
+        width: 100%;
+        position: relative;
+      }
+
+      .editor-section {
+        background: white;
+        display: flex;
+        flex-direction: column;
+        width: 25%;
+        min-width: 200px;
+        border-right: 1px solid #e8e8e8;
+      }
+
+      .preview-section {
+        background: white;
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+        min-width: 300px;
+      }
+
+      .resizer {
+        width: 6px;
+        background: #f0f0f0;
+        cursor: col-resize;
+        flex-shrink: 0;
+        position: relative;
+        transition: background-color 0.2s ease;
+      }
+
+      .resizer:hover {
+        background: #007cba;
+      }
+
+      .resizer::after {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 2px;
+        height: 30px;
+        background: #ccc;
+        border-radius: 1px;
+      }
+
+      .resizer:hover::after {
+        background: white;
+      }
+
+      .section-header {
+        padding: 12px 20px;
+        border-bottom: 1px solid #e8e8e8;
+        background: #fafafa;
+        font-weight: 600;
+        color: #333;
+        font-size: 14px;
+      }
+
+      .editor-content {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+        overflow: hidden;
+      }
+
+      .CodeMirror {
+        flex: 1;
+        font-family: "Courier New", monospace;
+        font-size: 14px;
+        line-height: 1.5;
+        border: none;
+      }
+
+      .CodeMirror-scroll {
+        overflow: auto !important;
+      }
+
+      textarea {
+        flex: 1;
+        border: none;
+        padding: 20px;
+        font-family: "Courier New", monospace;
+        font-size: 14px;
+        resize: none;
+        box-sizing: border-box;
+        outline: none;
+        line-height: 1.5;
+        overflow: auto;
+        white-space: pre;
+        word-wrap: normal;
+      }
+
+      #preview {
+        flex: 1;
+        padding: 0;
+        overflow: hidden;
+        background: white;
+        position: relative;
+      }
+
+      .preview-container {
+        width: 100%;
+        height: 100%;
+        overflow: auto;
+        cursor: grab;
+        position: relative;
+      }
+
+      .preview-container:active {
+        cursor: grabbing;
+      }
+
+      .preview-content {
+        transform-origin: 0 0;
+        transition: transform 0.1s ease;
+        padding: 20px;
+      }
+
+      .preview-controls {
+        position: absolute;
+        bottom: 10px;
+        right: 10px;
+        display: flex;
+        gap: 5px;
+        padding: 8px;
+        z-index: 10;
+      }
+
+      .preview-controls button {
+        padding: 6px 10px;
+        font-size: 12px;
+        min-width: auto;
+        background: #f5f5f5;
+        color: #333;
+        border: 1px solid #ddd;
+      }
+
+      .preview-controls button:hover {
+        background: #e9ecef;
+        color: #000;
+      }
+
+      button {
+        background: #007cba;
+        color: white;
+        border: none;
+        padding: 10px 16px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 500;
+      }
+
+      button:hover {
+        background: #005a87;
+      }
+
+      button.delete {
+        background: #dc3545;
+      }
+
+      button.delete:hover {
+        background: #c82333;
+      }
+
+      .file-item {
+        padding: 12px 16px;
+        border-radius: 6px;
+        margin-bottom: 8px;
+        cursor: pointer;
+        background: #f8f9fa;
+        transition: all 0.2s ease;
+      }
+
+      .file-item:hover {
+        background: #e9ecef;
+      }
+
+      .file-item.active {
+        background: #007cba;
+        color: white;
+      }
+
+      .file-item-name {
+        font-weight: 500;
+        margin-bottom: 4px;
+      }
+
+      .file-item-date {
+        font-size: 12px;
+        opacity: 0.7;
+      }
+
+      .sidebar.collapsed .file-item {
+        padding: 8px;
+        text-align: center;
+      }
+
+      .sidebar.collapsed .file-item-name {
+        font-size: 10px;
+        margin-bottom: 0;
+      }
+
+      .sidebar.collapsed .file-item-date {
+        display: none;
+      }
+
+      .sidebar-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.3);
+        z-index: 40;
+        display: none;
+      }
+
+      .sidebar-overlay.show {
+        display: block;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <div class="header-left">
+        <button class="header-toggle" onclick="toggleSidebar()">☰</button>
+      </div>
+      <div class="header-right">
+        <input
+          type="text"
+          id="file-name"
+          placeholder="Enter file name..."
+          value="Untitled Diagram"
+        />
+        <button onclick="newFile()">New File</button>
+        <button onclick="saveFile()">Save</button>
+        <button onclick="deleteCurrentFile()" class="delete">Delete</button>
+      </div>
+    </div>
+
+    <div class="main-layout">
+      <div
+        class="sidebar-overlay"
+        id="sidebar-overlay"
+        onclick="toggleSidebar()"
+      ></div>
+      <div class="sidebar" id="sidebar">
+        <div class="file-list" id="file-list"></div>
+      </div>
+
+      <div class="editor-container" id="editor-container">
+        <div class="editor-section" id="editor-section">
+          <div class="editor-content">
+            <textarea
+              id="mermaid-code"
+              placeholder="Enter your Mermaid diagram code here..."
+            >
+graph TD
+    A[Start] --> B{Is it working?}
+    B -->|Yes| C[Great!]
+    B -->|No| D[Fix it]
+    D --> B</textarea
+            >
+          </div>
+        </div>
+
+        <div class="resizer" id="resizer"></div>
+
+        <div class="preview-section" id="preview-section">
+          <div id="preview">
+            <div class="preview-controls">
+              <button onclick="zoomIn()">+</button>
+              <button onclick="zoomOut()">-</button>
+              <button onclick="resetZoom()">⛶</button>
+            </div>
+            <div class="preview-container" id="preview-container">
+              <div class="preview-content" id="preview-content"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      let currentFileId = null;
+
+      mermaid.initialize({ startOnLoad: false });
+
+      const textArea = document.getElementById("mermaid-code");
+      const preview = document.getElementById("preview");
+      const previewContent = document.getElementById("preview-content");
+      const previewContainer = document.getElementById("preview-container");
+      const fileName = document.getElementById("file-name");
+
+      // Initialize CodeMirror
+      const editor = CodeMirror.fromTextArea(textArea, {
+        mode: "yaml",
+        theme: "default",
+        lineNumbers: true,
+        lineWrapping: false,
+        indentWithTabs: false,
+        indentUnit: 2,
+        tabSize: 2,
+        autoCloseBrackets: true,
+        matchBrackets: true,
+        scrollbarStyle: "native"
+      });
+
+      let currentZoom = 1;
+      let isPanning = false;
+      let panStart = { x: 0, y: 0 };
+
+      // Resizer functionality
+      let isResizing = false;
+      const resizer = document.getElementById("resizer");
+      const editorSection = document.getElementById("editor-section");
+      const previewSection = document.getElementById("preview-section");
+      const editorContainer = document.getElementById("editor-container");
+
+      resizer.addEventListener("mousedown", (e) => {
+        isResizing = true;
+        document.body.style.cursor = "col-resize";
+        document.body.style.userSelect = "none";
+      });
+
+      document.addEventListener("mousemove", (e) => {
+        if (!isResizing) return;
+        
+        const containerRect = editorContainer.getBoundingClientRect();
+        const newWidth = ((e.clientX - containerRect.left) / containerRect.width) * 100;
+        
+        // Set minimum and maximum widths
+        if (newWidth >= 15 && newWidth <= 85) {
+          editorSection.style.width = `${newWidth}%`;
+        }
+      });
+
+      document.addEventListener("mouseup", () => {
+        if (isResizing) {
+          isResizing = false;
+          document.body.style.cursor = "";
+          document.body.style.userSelect = "";
+        }
+      });
+
+      editor.on("change", updatePreview);
+
+      // Zoom and pan functionality
+      function zoomIn() {
+        currentZoom = Math.min(currentZoom * 1.2, 5);
+        updateTransform();
+      }
+
+      function zoomOut() {
+        currentZoom = Math.max(currentZoom / 1.2, 0.1);
+        updateTransform();
+      }
+
+      function resetZoom() {
+        currentZoom = 1;
+        previewContent.style.transform = `scale(${currentZoom})`;
+        previewContainer.scrollTop = 0;
+        previewContainer.scrollLeft = 0;
+      }
+
+      function updateTransform() {
+        previewContent.style.transform = `scale(${currentZoom})`;
+      }
+
+      // Panning functionality
+      previewContainer.addEventListener("mousedown", (e) => {
+        isPanning = true;
+        panStart.x = e.clientX - previewContainer.offsetLeft;
+        panStart.y = e.clientY - previewContainer.offsetTop;
+        previewContainer.style.cursor = "grabbing";
+      });
+
+      previewContainer.addEventListener("mousemove", (e) => {
+        if (!isPanning) return;
+        e.preventDefault();
+
+        const x = e.clientX - previewContainer.offsetLeft;
+        const y = e.clientY - previewContainer.offsetTop;
+
+        const walkX = (x - panStart.x) * 2;
+        const walkY = (y - panStart.y) * 2;
+
+        previewContainer.scrollLeft -= walkX;
+        previewContainer.scrollTop -= walkY;
+
+        panStart.x = x;
+        panStart.y = y;
+      });
+
+      previewContainer.addEventListener("mouseup", () => {
+        isPanning = false;
+        previewContainer.style.cursor = "grab";
+      });
+
+      previewContainer.addEventListener("mouseleave", () => {
+        isPanning = false;
+        previewContainer.style.cursor = "grab";
+      });
+
+      // Wheel zoom
+      previewContainer.addEventListener("wheel", (e) => {
+        e.preventDefault();
+        if (e.deltaY < 0) {
+          zoomIn();
+        } else {
+          zoomOut();
+        }
+      });
+
+      function updatePreview() {
+        const code = editor.getValue();
+        if (!code || !code.trim()) {
+          previewContent.innerHTML = '<div style="color: #666; padding: 20px; text-align: center;">Enter Mermaid code to see preview</div>';
+          return;
+        }
+
+        previewContent.innerHTML = '<div style="color: #666; padding: 20px;">Rendering diagram...</div>';
+        
+        try {
+          // Clear any existing mermaid elements
+          const existingDiagram = document.getElementById('mermaid-diagram');
+          if (existingDiagram) {
+            existingDiagram.remove();
+          }
+          
+          mermaid
+            .render("mermaid-diagram", code)
+            .then(({ svg }) => {
+              previewContent.innerHTML = svg;
+            })
+            .catch((err) => {
+              console.error("Mermaid render error:", err);
+              previewContent.innerHTML = `<div style="color: red; padding: 20px;">Error: ${err.message}</div>`;
+            });
+        } catch (err) {
+          console.error("Preview error:", err);
+          previewContent.innerHTML = `<div style="color: red; padding: 20px;">Error: ${err.message}</div>`;
+        }
+      }
+
+      async function loadFiles() {
+        try {
+          const response = await fetch("/api/files");
+          const files = await response.json();
+          const fileList = document.getElementById("file-list");
+          fileList.innerHTML = "";
+
+          files.forEach((file) => {
+            const fileItem = document.createElement("div");
+            fileItem.className = "file-item";
+            if (file.id === currentFileId) {
+              fileItem.classList.add("active");
+            }
+            fileItem.innerHTML = `<div class="file-item-name">${file.name}</div><div class="file-item-date">${new Date(file.created).toLocaleString()}</div>`;
+            fileItem.onclick = () => loadFile(file.id);
+            fileList.appendChild(fileItem);
+          });
+        } catch (err) {
+          console.error("Error loading files:", err);
+        }
+      }
+
+      async function loadFile(fileId) {
+        try {
+          const response = await fetch(`/api/files/${fileId}`);
+          const file = await response.json();
+
+          currentFileId = fileId;
+          fileName.value = file.name;
+          editor.setValue(file.content);
+          
+          // Force preview update after a small delay to ensure CodeMirror has processed the content
+          setTimeout(() => {
+            updatePreview();
+          }, 100);
+          
+          loadFiles();
+        } catch (err) {
+          console.error("Error loading file:", err);
+        }
+      }
+
+      async function saveFile() {
+        const data = {
+          id: currentFileId,
+          name: fileName.value || 'Untitled Diagram',
+          content: editor.getValue(),
+        };
+
+        try {
+          const response = await fetch("/api/files", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(data),
+          });
+          
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          
+          const result = await response.json();
+          
+          if (result.success) {
+            currentFileId = result.id;
+            loadFiles();
+            alert("File saved successfully!");
+          } else {
+            throw new Error(result.error || 'Unknown error occurred');
+          }
+        } catch (err) {
+          console.error("Error saving file:", err);
+          alert(`Error saving file: ${err.message}`);
+        }
+      }
+
+      async function deleteCurrentFile() {
+        if (
+          !currentFileId ||
+          !confirm("Are you sure you want to delete this file?")
+        ) {
+          return;
+        }
+
+        try {
+          await fetch(`/api/files/${currentFileId}`, {
+            method: "DELETE",
+          });
+          newFile();
+          loadFiles();
+          alert("File deleted successfully!");
+        } catch (err) {
+          console.error("Error deleting file:", err);
+          alert("Error deleting file");
+        }
+      }
+
+      function newFile() {
+        currentFileId = null;
+        fileName.value = "Untitled Diagram";
+        editor.setValue(`graph TD
+    A[Start] --> B{Is it working?}
+    B -->|Yes| C[Great!]
+    B -->|No| D[Fix it]
+    D --> B`);
+    
+        // Force preview update after a small delay
+        setTimeout(() => {
+          updatePreview();
+        }, 100);
+        
+        loadFiles();
+      }
+
+      function toggleSidebar() {
+        const sidebar = document.getElementById("sidebar");
+        const overlay = document.getElementById("sidebar-overlay");
+
+        sidebar.classList.toggle("collapsed");
+
+        if (sidebar.classList.contains("collapsed")) {
+          overlay.classList.remove("show");
+        } else {
+          overlay.classList.add("show");
+        }
+      }
+
+      // Initialize with sidebar collapsed
+      document.addEventListener("DOMContentLoaded", function () {
+        const sidebar = document.getElementById("sidebar");
+        sidebar.classList.add("collapsed");
+      });
+
+      loadFiles();
+      updatePreview();
+    </script>
+  </body>
+</html>
