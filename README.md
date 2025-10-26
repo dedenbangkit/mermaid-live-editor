@@ -9,27 +9,33 @@ A modern, feature-rich live editor for Mermaid diagrams. Create, edit, and previ
 ## Features
 
 ### 🎨 **Modern Interface**
-- Clean, responsive design with collapsible sidebar
+- Clean, responsive design with compact collapsible sidebar (256px)
 - Side-by-side code editor and live preview
 - Resizable panels to customize your workspace
-- Header navigation with all essential controls
+- Minimal header with clean typography (Google Fonts: Inter & JetBrains Mono)
+- Inline diagram title editing with rename icon
+- Line separators for cleaner file list
 
 ### 📝 **Advanced Editor**
 - Syntax highlighting with CodeMirror
 - Line numbers and bracket matching
 - Horizontal and vertical scrolling
 - Auto-indentation and code formatting
+- Real-time preview updates as you type
 
 ### 🔍 **Preview Controls**
 - Zoom in/out with mouse wheel or buttons
 - Pan by clicking and dragging
 - Reset zoom to fit view
-- Real-time preview updates
+- Smooth zoom transitions
 
 ### 💾 **File Management**
 - Save and load multiple diagram files
-- File list with creation timestamps
+- Smart file sorting by last modified (most recent first)
+- Detailed timestamps with relative time format (e.g., "5m ago", "2h ago")
+- Quick rename with inline editing
 - Delete files with confirmation
+- Auto-save on rename or edit
 - Persistent storage using IndexedDB (browser storage)
 
 ### 🌐 **No Backend Required**
@@ -38,6 +44,13 @@ A modern, feature-rich live editor for Mermaid diagrams. Create, edit, and previ
 - No server setup or installation needed
 - Works offline after first load
 - Can be hosted on any static file server
+
+### 📚 **Interactive Cheatsheet**
+- Comprehensive examples of all Mermaid diagram types
+- Opens in new tab (preserves your work in the editor)
+- Clean sidebar navigation to jump to examples
+- Live rendered diagrams with copy-to-clipboard functionality
+- Matching theme and typography with main editor
 
 ## Quick Start
 
@@ -75,24 +88,34 @@ This application can be deployed to any static hosting service:
 ## Usage
 
 ### Creating Diagrams
-1. Click the hamburger menu (☰) to open the file list
-2. Click **New File** to create a new diagram
-3. Enter your diagram name in the text field
+1. Click the hamburger menu (☰) to toggle the sidebar
+2. Click **New** button to create a new diagram
+3. Click the rename icon (✏️) next to the diagram title to change the name
 4. Write your Mermaid code in the editor
 5. Watch the live preview update automatically
-6. Click **Save** to store your diagram
+6. Click **Save** to store your diagram (or Ctrl/Cmd+S)
 
 ### Managing Files
-- **Open**: Click any file in the sidebar to open it
-- **Save**: Click the Save button or use the name field to rename
-- **Delete**: Click the Delete button to remove the current file
-- **New**: Click New File to create a fresh diagram
+- **Rename**: Click the pencil icon next to the diagram title, edit inline, press Enter or click outside to save
+- **Open**: Click any file in the sidebar to open it (sorted by last modified)
+- **Save**: Click the Save button to update the current diagram
+- **Save As New**: Click the copy icon to duplicate the diagram
+- **Delete**: Click the trash icon on any file in the list (hover to reveal)
+- **New**: Click the New button to start a fresh diagram
+
+### Keyboard Shortcuts
+- **Ctrl/Cmd + S**: Save current diagram
+- **Ctrl/Cmd + N**: Create new diagram
+- **Ctrl/Cmd + B**: Toggle sidebar
+- **Enter**: Confirm rename
+- **Escape**: Cancel rename
 
 ### Navigation
 - **Zoom**: Use the +/- buttons or mouse wheel in the preview
 - **Pan**: Click and drag in the preview area
 - **Reset**: Click the reset button (⛶) to fit the diagram
 - **Resize**: Drag the divider between code and preview panels
+- **Cheatsheet**: Click the "Cheatsheet" button to open examples in a new tab
 
 ## Supported Mermaid Diagrams
 
@@ -125,10 +148,13 @@ graph TD
 ## Architecture
 
 ### Frontend-Only Application
-- **index.html**: Complete single-page application with embedded CSS and JavaScript
+- **index.html**: Main editor with clean, compact UI
+- **cheatsheet.html**: Interactive examples and documentation
 - **CodeMirror**: Syntax highlighting and editor features
-- **Mermaid.js**: Diagram rendering engine
+- **Mermaid.js v10.6.1**: Diagram rendering engine
 - **IndexedDB**: Browser-based persistent storage
+- **Tailwind CSS (CDN)**: Utility-first styling
+- **Google Fonts**: Inter (UI) & JetBrains Mono (code)
 - **Vanilla JS**: No framework dependencies, no build process required
 
 ### Storage
@@ -136,6 +162,7 @@ graph TD
 - Data persists across browser sessions
 - Each browser/device has its own independent storage
 - No server communication required
+- Automatic tracking of creation and modification times
 
 ### Data Structure
 Files are stored with the following structure:
@@ -144,8 +171,29 @@ Files are stored with the following structure:
   "id": "file_timestamp",
   "name": "diagram_name",
   "content": "mermaid_code",
-  "created": "ISO_8601_timestamp"
+  "created": "ISO_8601_timestamp",
+  "lastModified": "ISO_8601_timestamp"
 }
+```
+
+### Project Structure
+```
+mermaid-live-editor/
+├── index.html              # Main editor
+├── cheatsheet.html         # Examples and documentation
+├── assets/
+│   ├── css/
+│   │   └── styles.css      # Custom styles
+│   ├── js/
+│   │   └── app.js          # Application logic
+│   └── icons/              # Favicons and app icons
+│       ├── favicon.ico
+│       ├── favicon-16x16.png
+│       ├── favicon-32x32.png
+│       ├── apple-touch-icon.png
+│       ├── android-chrome-192x192.png
+│       └── android-chrome-512x512.png
+└── README.md
 ```
 
 ## Browser Compatibility
