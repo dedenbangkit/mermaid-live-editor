@@ -100,7 +100,7 @@
 }
 
 .sidebar.collapsed {
-  margin-left: -320px; /* -w-80 (20rem = 320px) */
+  margin-left: -256px; /* -w-64 (16rem = 256px) */
 }
 
 @media (max-width: 768px) {
@@ -109,7 +109,7 @@
   }
 
   .sidebar.collapsed {
-    margin-left: -320px;
+    margin-left: -256px;
   }
 }
 
@@ -117,22 +117,6 @@
   .sidebar {
     position: relative;
   }
-}
-
-/* File Item Styling */
-.file-item {
-  transition: all 0.2s ease;
-  border-left: 3px solid transparent;
-}
-
-.file-item:hover {
-  transform: translateX(2px);
-  border-left-color: #6366f1;
-}
-
-.file-item.active {
-  border-left-color: #6366f1;
-  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.2);
 }
 
 /* Button Hover Effects */

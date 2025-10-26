@@ -149,10 +149,10 @@ async function loadFiles() {
       const fileItem = document.createElement("div");
       const isActive = file.id === currentFileId;
 
-      fileItem.className = `file-item group p-2 rounded-lg transition-all duration-200 ${
+      fileItem.className = `file-item group px-3 py-2.5 border-b border-slate-200 transition-all duration-200 cursor-pointer ${
         isActive
-          ? 'bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-200 active'
-          : 'bg-slate-50 hover:bg-slate-100 border border-transparent'
+          ? 'bg-indigo-50 border-l-2 border-l-indigo-500'
+          : 'hover:bg-slate-50 border-l-2 border-l-transparent'
       }`;
 
       // Format detailed timestamp
@@ -228,6 +228,7 @@ async function loadFile(fileId) {
     if (file) {
       currentFileId = fileId;
       fileName.value = file.name;
+      updateDiagramTitle();
       editor.setValue(file.content);
 
       setTimeout(() => {
@@ -348,6 +349,7 @@ async function deleteCurrentFile() {
 function newFile() {
   currentFileId = null;
   fileName.value = "Untitled Diagram";
+  updateDiagramTitle();
   editor.setValue(`graph TD
     A[Start] --> B{Is it working?}
     B -->|Yes| C[Great!]
@@ -529,6 +531,31 @@ function toggleSidebar() {
   sidebar.classList.toggle("collapsed");
 }
 
+function toggleRename() {
+  const titleElement = document.getElementById('diagram-title');
+  const inputElement = document.getElementById('file-name');
+
+  if (inputElement.classList.contains('hidden')) {
+    // Show input, hide title
+    titleElement.classList.add('hidden');
+    inputElement.classList.remove('hidden');
+    inputElement.focus();
+    inputElement.select();
+  } else {
+    // Hide input, show title
+    inputElement.classList.add('hidden');
+    titleElement.classList.remove('hidden');
+    updateDiagramTitle();
+  }
+}
+
+function updateDiagramTitle() {
+  const titleElement = document.getElementById('diagram-title');
+  const inputElement = document.getElementById('file-name');
+  const diagramName = inputElement.value || 'Untitled Diagram';
+  titleElement.textContent = diagramName;
+}
+
 // ================== Notification System ==================
 
 function showNotification(message, type = 'info') {
@@ -604,6 +631,28 @@ document.addEventListener("DOMContentLoaded", async function () {
   initResizer();
   initPanning();
   initKeyboardShortcuts();
+
+  // Add event listeners for file name input
+  fileName.addEventListener('blur', () => {
+    const inputElement = document.getElementById('file-name');
+    if (!inputElement.classList.contains('hidden')) {
+      toggleRename();
+    }
+  });
+
+  fileName.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      toggleRename();
+    }
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      // Reset to original value
+      const titleElement = document.getElementById('diagram-title');
+      fileName.value = titleElement.textContent;
+      toggleRename();
+    }
+  });
 
   // Start with sidebar collapsed on mobile
   if (window.innerWidth < 768) {
