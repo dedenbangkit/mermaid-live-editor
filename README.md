@@ -1,6 +1,8 @@
 # Mermaid Live Editor
 
-A modern, feature-rich live editor for Mermaid diagrams with Docker support. Create, edit, and preview Mermaid diagrams with syntax highlighting, zoom controls, and file management.
+A modern, feature-rich live editor for Mermaid diagrams. Create, edit, and preview Mermaid diagrams with syntax highlighting, zoom controls, and file management - all running entirely in your browser with no backend required!
+
+**[🚀 Live Demo](https://dedenbangkit.github.io/mermaid-live-editor/)**
 
 ![Mermaid Live Editor Screenshot](images/mermaid-live-editor.jpg)
 
@@ -28,38 +30,47 @@ A modern, feature-rich live editor for Mermaid diagrams with Docker support. Cre
 - Save and load multiple diagram files
 - File list with creation timestamps
 - Delete files with confirmation
-- Persistent storage with JSON backend
+- Persistent storage using IndexedDB (browser storage)
 
-### 🐳 **Docker Ready**
-- One-command deployment with Docker Compose
-- Runs on localhost:9000
-- Volume mounting for persistent data
-- Production-ready Flask backend
+### 🌐 **No Backend Required**
+- Runs entirely in your browser
+- All data stored locally using IndexedDB
+- No server setup or installation needed
+- Works offline after first load
+- Can be hosted on any static file server
 
 ## Quick Start
 
-### Prerequisites
-- Docker and Docker Compose installed on your system
+### Option 1: Open Locally
+Simply open `index.html` in your web browser. That's it!
 
-### Installation
-
-1. Clone the repository:
+### Option 2: Run with Python HTTP Server
 ```bash
+# Clone the repository
 git clone https://github.com/dedenbangkit/mermaid-live-editor.git
 cd mermaid-live-editor
+
+# Start a simple HTTP server (Python 3)
+python -m http.server 8000
+
+# Or with Python 2
+python -m SimpleHTTPServer 8000
 ```
 
-2. Start the application:
-```bash
-docker compose up
-```
+Then open your browser and navigate to: `http://localhost:8000`
 
-3. Open your browser and navigate to:
-```
-http://localhost:9000
-```
+### Option 3: Use with Live Server (VS Code)
+1. Install the "Live Server" extension in VS Code
+2. Right-click on `index.html`
+3. Select "Open with Live Server"
 
-That's it! You're ready to create beautiful Mermaid diagrams.
+### Option 4: Deploy to Static Hosting
+This application can be deployed to any static hosting service:
+- **GitHub Pages**: Push to a repository and enable GitHub Pages
+- **Netlify**: Drag and drop the folder to Netlify
+- **Vercel**: Deploy with a single command
+- **Cloudflare Pages**: Connect your repository
+- Or any other static hosting provider
 
 ## Usage
 
@@ -113,45 +124,42 @@ graph TD
 
 ## Architecture
 
-### Backend (Flask)
-- **app.py**: Main Flask application
-- **API Endpoints**:
-  - `GET /api/files` - List all saved files
-  - `GET /api/files/<id>` - Get specific file
-  - `POST /api/files` - Save/create file
-  - `DELETE /api/files/<id>` - Delete file
-
-### Frontend
-- **index.html**: Single-page application
+### Frontend-Only Application
+- **index.html**: Complete single-page application with embedded CSS and JavaScript
 - **CodeMirror**: Syntax highlighting and editor features
 - **Mermaid.js**: Diagram rendering engine
-- **Vanilla JS**: No framework dependencies
+- **IndexedDB**: Browser-based persistent storage
+- **Vanilla JS**: No framework dependencies, no build process required
 
 ### Storage
-- Files stored as JSON in `/saved_files` directory
-- Docker volume mounting for persistence
-- Simple file-based storage (easily replaceable)
+- Files stored locally in your browser using IndexedDB
+- Data persists across browser sessions
+- Each browser/device has its own independent storage
+- No server communication required
 
-## Configuration
-
-### Port Configuration
-The default port is 9000. To change it, modify the `docker-compose.yml`:
-
-```yaml
-ports:
-  - "YOUR_PORT:5000"  # Change YOUR_PORT to desired port
+### Data Structure
+Files are stored with the following structure:
+```json
+{
+  "id": "file_timestamp",
+  "name": "diagram_name",
+  "content": "mermaid_code",
+  "created": "ISO_8601_timestamp"
+}
 ```
 
-### Development Mode
-For development with hot reloading:
+## Browser Compatibility
 
-```bash
-# Install dependencies
-pip install -r requirements.txt
+This application requires a browser with IndexedDB support:
+- Chrome/Edge 24+
+- Firefox 16+
+- Safari 10+
+- Opera 15+
+- All modern mobile browsers
 
-# Run development server
-python app.py
-```
+## Data Privacy
+
+All your diagrams are stored **locally in your browser**. No data is ever sent to any server. Your diagrams stay on your device.
 
 ## Contributing
 
@@ -169,7 +177,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - [Mermaid.js](https://mermaid.js.org/) - The amazing diagramming library
 - [CodeMirror](https://codemirror.net/) - Excellent code editor component
-- [Flask](https://flask.palletsprojects.com/) - Lightweight Python web framework
 
 ## Support
 

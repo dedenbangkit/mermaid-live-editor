@@ -419,6 +419,115 @@ graph TD
     </div>
 
     <script>
+      // IndexedDB Database Management
+      const DB_NAME = 'MermaidEditorDB';
+      const DB_VERSION = 1;
+      const STORE_NAME = 'diagrams';
+      let db = null;
+
+      // Initialize IndexedDB
+      async function initDB() {
+        return new Promise((resolve, reject) => {
+          const request = indexedDB.open(DB_NAME, DB_VERSION);
+
+          request.onerror = () => {
+            console.error('Database failed to open');
+            reject(request.error);
+          };
+
+          request.onsuccess = () => {
+            db = request.result;
+            console.log('Database opened successfully');
+            resolve(db);
+          };
+
+          request.onupgradeneeded = (e) => {
+            db = e.target.result;
+
+            // Create object store if it doesn't exist
+            if (!db.objectStoreNames.contains(STORE_NAME)) {
+              const objectStore = db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+              objectStore.createIndex('name', 'name', { unique: false });
+              objectStore.createIndex('created', 'created', { unique: false });
+              console.log('Object store created');
+            }
+          };
+        });
+      }
+
+      // Save file to IndexedDB
+      async function saveToIndexedDB(fileData) {
+        return new Promise((resolve, reject) => {
+          const transaction = db.transaction([STORE_NAME], 'readwrite');
+          const objectStore = transaction.objectStore(STORE_NAME);
+
+          const request = objectStore.put(fileData);
+
+          request.onsuccess = () => {
+            console.log('File saved to IndexedDB');
+            resolve(fileData.id);
+          };
+
+          request.onerror = () => {
+            console.error('Error saving file');
+            reject(request.error);
+          };
+        });
+      }
+
+      // Load file from IndexedDB
+      async function loadFromIndexedDB(fileId) {
+        return new Promise((resolve, reject) => {
+          const transaction = db.transaction([STORE_NAME], 'readonly');
+          const objectStore = transaction.objectStore(STORE_NAME);
+          const request = objectStore.get(fileId);
+
+          request.onsuccess = () => {
+            resolve(request.result);
+          };
+
+          request.onerror = () => {
+            reject(request.error);
+          };
+        });
+      }
+
+      // Get all files from IndexedDB
+      async function getAllFilesFromIndexedDB() {
+        return new Promise((resolve, reject) => {
+          const transaction = db.transaction([STORE_NAME], 'readonly');
+          const objectStore = transaction.objectStore(STORE_NAME);
+          const request = objectStore.getAll();
+
+          request.onsuccess = () => {
+            resolve(request.result);
+          };
+
+          request.onerror = () => {
+            reject(request.error);
+          };
+        });
+      }
+
+      // Delete file from IndexedDB
+      async function deleteFromIndexedDB(fileId) {
+        return new Promise((resolve, reject) => {
+          const transaction = db.transaction([STORE_NAME], 'readwrite');
+          const objectStore = transaction.objectStore(STORE_NAME);
+          const request = objectStore.delete(fileId);
+
+          request.onsuccess = () => {
+            console.log('File deleted from IndexedDB');
+            resolve();
+          };
+
+          request.onerror = () => {
+            reject(request.error);
+          };
+        });
+      }
+
+      // Application State
       let currentFileId = null;
 
       mermaid.initialize({ startOnLoad: false });
@@ -462,10 +571,10 @@ graph TD
 
       document.addEventListener("mousemove", (e) => {
         if (!isResizing) return;
-        
+
         const containerRect = editorContainer.getBoundingClientRect();
         const newWidth = ((e.clientX - containerRect.left) / containerRect.width) * 100;
-        
+
         // Set minimum and maximum widths
         if (newWidth >= 15 && newWidth <= 85) {
           editorSection.style.width = `${newWidth}%`;
@@ -557,14 +666,14 @@ graph TD
         }
 
         previewContent.innerHTML = '<div style="color: #666; padding: 20px;">Rendering diagram...</div>';
-        
+
         try {
           // Clear any existing mermaid elements
           const existingDiagram = document.getElementById('mermaid-diagram');
           if (existingDiagram) {
             existingDiagram.remove();
           }
-          
+
           mermaid
             .render("mermaid-diagram", code)
             .then(({ svg }) => {
@@ -582,10 +691,12 @@ graph TD
 
       async function loadFiles() {
         try {
-          const response = await fetch("/api/files");
-          const files = await response.json();
+          const files = await getAllFilesFromIndexedDB();
           const fileList = document.getElementById("file-list");
           fileList.innerHTML = "";
+
+          // Sort files by created date (newest first)
+          files.sort((a, b) => new Date(b.created) - new Date(a.created));
 
           files.forEach((file) => {
             const fileItem = document.createElement("div");
@@ -604,53 +715,39 @@ graph TD
 
       async function loadFile(fileId) {
         try {
-          const response = await fetch(`/api/files/${fileId}`);
-          const file = await response.json();
+          const file = await loadFromIndexedDB(fileId);
 
-          currentFileId = fileId;
-          fileName.value = file.name;
-          editor.setValue(file.content);
-          
-          // Force preview update after a small delay to ensure CodeMirror has processed the content
-          setTimeout(() => {
-            updatePreview();
-          }, 100);
-          
-          loadFiles();
+          if (file) {
+            currentFileId = fileId;
+            fileName.value = file.name;
+            editor.setValue(file.content);
+
+            // Force preview update after a small delay to ensure CodeMirror has processed the content
+            setTimeout(() => {
+              updatePreview();
+            }, 100);
+
+            loadFiles();
+          }
         } catch (err) {
           console.error("Error loading file:", err);
+          alert("Error loading file");
         }
       }
 
       async function saveFile() {
-        const data = {
-          id: currentFileId,
+        const fileData = {
+          id: currentFileId || `file_${Date.now()}`,
           name: fileName.value || 'Untitled Diagram',
           content: editor.getValue(),
+          created: currentFileId ? (await loadFromIndexedDB(currentFileId))?.created || new Date().toISOString() : new Date().toISOString()
         };
 
         try {
-          const response = await fetch("/api/files", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify(data),
-          });
-          
-          if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-          }
-          
-          const result = await response.json();
-          
-          if (result.success) {
-            currentFileId = result.id;
-            loadFiles();
-            alert("File saved successfully!");
-          } else {
-            throw new Error(result.error || 'Unknown error occurred');
-          }
+          const savedId = await saveToIndexedDB(fileData);
+          currentFileId = savedId;
+          loadFiles();
+          alert("File saved successfully!");
         } catch (err) {
           console.error("Error saving file:", err);
           alert(`Error saving file: ${err.message}`);
@@ -666,9 +763,7 @@ graph TD
         }
 
         try {
-          await fetch(`/api/files/${currentFileId}`, {
-            method: "DELETE",
-          });
+          await deleteFromIndexedDB(currentFileId);
           newFile();
           loadFiles();
           alert("File deleted successfully!");
@@ -686,12 +781,12 @@ graph TD
     B -->|Yes| C[Great!]
     B -->|No| D[Fix it]
     D --> B`);
-    
+
         // Force preview update after a small delay
         setTimeout(() => {
           updatePreview();
         }, 100);
-        
+
         loadFiles();
       }
 
@@ -708,14 +803,21 @@ graph TD
         }
       }
 
-      // Initialize with sidebar collapsed
-      document.addEventListener("DOMContentLoaded", function () {
+      // Initialize application
+      document.addEventListener("DOMContentLoaded", async function () {
         const sidebar = document.getElementById("sidebar");
         sidebar.classList.add("collapsed");
-      });
 
-      loadFiles();
-      updatePreview();
+        // Initialize IndexedDB and load files
+        try {
+          await initDB();
+          await loadFiles();
+          updatePreview();
+        } catch (err) {
+          console.error("Error initializing application:", err);
+          alert("Error initializing application. Please ensure your browser supports IndexedDB.");
+        }
+      });
     </script>
   </body>
 </html>
